@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Flooring Installation Notes</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #f0e6ff;
+      padding: 20px;
+    }
+    
+    h1 {
+      color: #6a0dad;
+    }
+    
+    table {
+      border-collapse: collapse;
+      width: 100%;
+      margin-bottom: 20px;
+    }
+    
+    th, td {
+      border: 1px solid #6a0dad;
+      padding: 8px;
+      text-align: left;
+    }
+    
+    th {
+      background-color: #b37edc;
+      color: white;
+    }
+    
+    input[type="text"], input[type="number"] {
+      width: 100%;
+      padding: 5px;
+      box-sizing: border-box;
+    }
+    
+    button {
+      background-color: #6a0dad;
+      color: white;
+      padding: 10px 20px;
+      border: none;
+      cursor: pointer;
+      margin-right: 10px;
+    }
+    
+    ul {
+      list-style-type: none;
+      padding: 0;
+    }
+    
+    li {
+      margin-bottom: 10px;
+    }
+    
+    .dimension-group {
+      margin-bottom: 0.5rem;
+    }
+    
+    .dimension-group input {
+      margin-right: 0.5rem;
+    }
+    
+    .add-dimension {
+      background-color: #6a0dad;
+      color: white;
+      padding: 0.25rem 0.5rem;
+      border: none;
+      cursor: pointer;
+      font-size: 1rem;
+      touch-action: manipulation;
+    }
+    
+  </style>
+</head>
+<body>
+  <h1>Flooring Installation Notes</h1>
+  
+  <table id="notesTable">
+    <tr>
+      <th>Job Address / Name</th>
+      <td><input type="text" id="jobAddress"></td>
+    </tr>
+    <tr>
+      <th>Date / Time</th>
+      <td><input type="text" id="dateTime"></td>
+    </tr>
+    <tr>
+      <th>Area / Floor</th>
+      <td><input type="text" id="area"></td>
+    </tr>
+    <tr>
+      <th>Sub Area</th>
+      <td><input type="text" id="subArea"></td>
+    </tr>
+    <tr>
+      <th>Sub-Sub Area</th>
+      <td><input type="text" id="subSubArea"></td>
+    </tr>
+    <tr>
+        <th>Dimensions (L x W)</th>
+        <td>
+          <div id="dimensionContainer">
+            <div class="dimension-group">
+              <input type="number" class="length" placeholder="Length" step="0.01">
+              x
+              <input type="number" class="width" placeholder="Width" step="0.01">
+            </div>
+          </div>
+          <button class="add-dimension" onclick="addDimension()">Add Dimension</button>
+        </td>
+      </tr>
+      <tr>
+        <th>Total Square Feet (SF)</th>
+        <td><input type="number" id="totalSqFeet" readonly></td>
+      </tr>
+    <tr>
+      <th>Notes</th>
+      <td><input type="text" id="notes"></td>
+    </tr>
+</table>
+  
+<button onclick="calculateTotalSF()">Calculate Total SF</button>
+  <button onclick="addToList()">Add to List</button>
+  <button onclick="generatePDF()">Generate PDF</button>
+  <button onclick="clearStorage()">Clear All Data</button>
+
+<h2>Flooring Installation List</h2>
+<ul id="flooringList"></ul>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.4/pdfmake.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.4/vfs_fonts.min.js"></script>
+<script>
+    // Load saved data from local storage
+    document.getElementById('jobAddress').value = localStorage.getItem('jobAddress') || '';
+    document.getElementById('dateTime').value = localStorage.getItem('dateTime') || '';
+    loadListFromStorage();
+
+    function addDimension() {
+      var dimensionContainer = document.getElementById('dimensionContainer');
+      var dimensionGroup = document.createElement('div');
+      dimensionGroup.classList.add('dimension-group');
+      dimensionGroup.innerHTML = `
+        <input type="number" class="length" placeholder="Length" step="0.01">
+        x
+        <input type="number" class="width" placeholder="Width" step="0.01">
+      `;
+      dimensionContainer.appendChild(dimensionGroup);
+    }
+    
+    function calculateTotalSF() {
+      var dimensionGroups = document.getElementsByClassName('dimension-group');
+      var totalSqFeet = 0;
+      
+      for (var i = 0; i < dimensionGroups.length; i++) {
+        var length = parseFloat(dimensionGroups[i].querySelector('.length').value);
+        var width = parseFloat(dimensionGroups[i].querySelector('.width').value);
+        var sqFeet = length * width;
+        totalSqFeet += sqFeet;
+      }
+      
+      document.getElementById('totalSqFeet').value = totalSqFeet.toFixed(2);
+    }
+
+    function addToList() {
+      var jobAddress = document.getElementById('jobAddress').value;
+      var dateTime = document.getElementById('dateTime').value;
+      var area = document.getElementById('area').value;
+      var subArea = document.getElementById('subArea').value;
+      var subSubArea = document.getElementById('subSubArea').value;
+      var notes = document.getElementById('notes').value;
+      
+      var dimensions = [];
+      var dimensionGroups = document.getElementsByClassName('dimension-group');
+      
+      for (var i = 0; i < dimensionGroups.length; i++) {
+        var length = dimensionGroups[i].querySelector('.length').value;
+        var width = dimensionGroups[i].querySelector('.width').value;
+        if (length && width) {
+          dimensions.push(`${length} x ${width}`);
+        }
+      }
+      
+      var totalSqFeet = document.getElementById('totalSqFeet').value;
+      
+      var listItem = document.createElement('li');
+      listItem.innerHTML = `
+        <strong>Job Address / Name:</strong> ${jobAddress}<br>
+        <strong>Date / Time:</strong> ${dateTime}<br>
+        <strong>Area / Floor:</strong> ${area}<br>
+        <strong>Sub Area:</strong> ${subArea}<br>
+        <strong>Sub-Sub Area:</strong> ${subSubArea}<br>
+        <strong>Dimensions (L x W):</strong> ${dimensions.join(', ')}<br>
+        <strong>Total Square Feet (SF):</strong> ${totalSqFeet}<br>
+        <strong>Notes:</strong> ${notes}
+      `;
+      
+      document.getElementById('flooringList').appendChild(listItem);
+      saveListToStorage();
+      
+      // Clear input fields
+      document.getElementById('area').value = '';
+      document.getElementById('subArea').value = '';
+      document.getElementById('subSubArea').value = '';
+      document.getElementById('dimensionContainer').innerHTML = `
+        <div class="dimension-group">
+          <input type="number" class="length" placeholder="Length" step="0.01">
+          x
+          <input type="number" class="width" placeholder="Width" step="0.01">
+        </div>
+      `;
+      document.getElementById('totalSqFeet').value = '';
+      document.getElementById('notes').value = '';
+
+      saveListToStorage();
+    }
+
+    function saveListToStorage() {
+      var listItems = document.getElementById('flooringList').innerHTML;
+      localStorage.setItem('flooringList', listItems);
+    }
+
+    function loadListFromStorage() {
+      var listItems = localStorage.getItem('flooringList');
+      if (listItems) {
+        document.getElementById('flooringList').innerHTML = listItems;
+      }
+    }
+
+    function clearStorage() {
+      localStorage.clear();
+      document.getElementById('jobAddress').value = '';
+      document.getElementById('dateTime').value = '';
+      document.getElementById('flooringList').innerHTML = '';
+    }
+
+    function generatePDF() {
+  var listItems = document.getElementById('flooringList').getElementsByTagName('li');
+  var contentData = [];
+  var jobAddress = '';
+
+  for (var i = 0; i < listItems.length; i++) {
+    var listItemText = listItems[i].innerText.split('\n');
+
+    for (var j = 0; j < listItemText.length; j++) {
+      var keyValue = listItemText[j].split(':');
+      var key = keyValue[0].trim();
+      var value = keyValue[1] ? keyValue[1].trim() : ''; // Check if value exists
+
+      if (key === 'Job Address / Name' && !jobAddress) {
+        jobAddress = value;
+      } else if (key !== 'Job Address / Name') {
+        contentData.push({ text: `${key}: ${value}`, margin: [0, 0, 0, 10] });
+      }
+    }
+
+    contentData.push({ text: '', margin: [0, 0, 0, 10] }); // Add empty line between list items
+  }
+
+  if (contentData.length === 0) { // Check if contentData is empty
+    console.error('No data to generate PDF.');
+    return;
+  }
+
+  var docDefinition = {
+    content: [
+      { text: 'Flooring Installation Notes', style: 'header' },
+      { text: `Job Address / Name: ${jobAddress}`, style: 'subheader' },
+      ...contentData
+    ],
+    styles: {
+      header: {
+        fontSize: 18,
+        bold: true,
+        margin: [0, 0, 0, 10]
+      },
+      subheader: {
+        fontSize: 14,
+        bold: true,
+        margin: [0, 0, 0, 10]
+      }
+    }
+  };
+
+  pdfMake.createPdf(docDefinition).download('flooring_notes.pdf');
+}
+  </script>
+</body>
+</html>
